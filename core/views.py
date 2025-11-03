@@ -6,8 +6,11 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import json
 from core.forms import MuseumRegistrationForm, StaffRegistrationForm, StaffLoginForm
-from core.models import Museum, MuseumStaff
+from core.models import Museum, MuseumStaff, Artwork, Artist
 
 
 def register_view(request):
@@ -90,3 +93,73 @@ def dashboard_view(request):
     }
     
     return render(request, 'dashboard.html', context)
+
+
+@login_required
+def upload_artwork_view(request):
+    """Page to upload new artwork"""
+    return render(request, 'upload_artwork.html')
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_artwork_submit(request):
+    """Handle artwork upload with multiple images and GPS location"""
+    try:
+        # Get form data
+        title = request.POST.get('title')
+        artist_name = request.POST.get('artist')
+        description = request.POST.get('description')
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
+        geofence_radius = request.POST.get('geofence_radius_meters', 100)
+        
+        # Validation
+        if not all([title, artist_name, description, latitude, longitude]):
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+        
+        # Get or create artist
+        artist, created = Artist.objects.get_or_create(
+            name=artist_name,
+            defaults={'biography': f'Artist of {title}'}
+        )
+        
+        # Get museum from logged-in staff
+        museum = request.user.museum
+        
+        # Count images
+        image_count = int(request.POST.get('image_count', 0))
+        if image_count == 0:
+            return JsonResponse({'error': 'At least one image is required'}, status=400)
+        
+        # Create artwork with first image
+        first_image = request.FILES.get('image_0')
+        if not first_image:
+            return JsonResponse({'error': 'No images uploaded'}, status=400)
+        
+        artwork = Artwork.objects.create(
+            museum=museum,
+            artist=artist,
+            title=title,
+            description=description,
+            latitude=float(latitude),
+            longitude=float(longitude),
+            geofence_radius_meters=int(geofence_radius),
+            image=first_image,
+            is_on_display=True
+        )
+        
+        # TODO: Handle additional images if needed (can create separate ArtworkImage model)
+        # For now, only the first image is saved to the main Artwork model
+        
+        messages.success(request, f'Artwork "{title}" uploaded successfully!')
+        
+        return JsonResponse({
+            'success': True,
+            'artwork_id': str(artwork.id),
+            'message': 'Artwork uploaded and translations are being generated'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

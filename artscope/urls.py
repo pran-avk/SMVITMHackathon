@@ -7,7 +7,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from core.views import register_view, login_view, logout_view, dashboard_view
+from core.views import (
+    register_view, login_view, logout_view, dashboard_view,
+    upload_artwork_view, upload_artwork_submit
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +27,10 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('dashboard/', dashboard_view, name='dashboard'),
+    
+    # Artwork Upload
+    path('upload-artwork/', upload_artwork_view, name='upload_artwork'),
+    path('upload-artwork/submit/', upload_artwork_submit, name='upload_artwork_submit'),
     
     # Frontend Templates (No map requirement)
     path('', TemplateView.as_view(template_name='index.html'), name='index'),
