@@ -147,6 +147,14 @@ class Artwork(models.Model):
     gallery_location = models.CharField(max_length=255, blank=True)
     room_number = models.CharField(max_length=50, blank=True)
     
+    # GPS Coordinates (captured during artifact upload)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    geofence_radius_meters = models.IntegerField(default=100, help_text="Radius in meters for geofencing")
+    
+    # QR Code for fallback scanning
+    qr_code = models.ImageField(upload_to='artworks/qrcodes/', blank=True, null=True)
+    
     # Media Files
     image = models.ImageField(
         upload_to='artworks/images/',
@@ -203,6 +211,55 @@ class Artwork(models.Model):
     
     def __str__(self):
         return f"{self.title} by {self.artist.name if self.artist else 'Unknown'}"
+
+
+class ArtworkTranslation(models.Model):
+    """
+    Multi-language support for artwork descriptions
+    Allows museums to provide descriptions in multiple languages
+    """
+    
+    LANGUAGE_CHOICES = [
+        ('en', 'English'),
+        ('es', 'Spanish'),
+        ('fr', 'French'),
+        ('de', 'German'),
+        ('it', 'Italian'),
+        ('zh', 'Chinese'),
+        ('ja', 'Japanese'),
+        ('ar', 'Arabic'),
+        ('hi', 'Hindi'),
+        ('pt', 'Portuguese'),
+        ('kn', 'Kannada'),  # Indian language
+        ('ta', 'Tamil'),    # Indian language
+        ('te', 'Telugu'),   # Indian language
+        ('ml', 'Malayalam'), # Indian language
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    artwork = models.ForeignKey(Artwork, on_delete=models.CASCADE, related_name='translations')
+    language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    historical_context = models.TextField(blank=True)
+    
+    # Audio narration for this language
+    audio_narration = models.FileField(
+        upload_to='artworks/audio/translations/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(['mp3', 'wav', 'ogg'])]
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['artwork', 'language']
+        ordering = ['language']
+    
+    def __str__(self):
+        return f"{self.artwork.title} ({self.get_language_display()})"
 
 
 class VisitorSession(models.Model):

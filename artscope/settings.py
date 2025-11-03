@@ -82,9 +82,9 @@ WSGI_APPLICATION = 'artscope.wsgi.application'
 
 # Database
 # Use PostgreSQL in production (Render), SQLite for local development
-DATABASE_URL = os.getenv('DATABASE_URL', '')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-if DATABASE_URL:
+if DATABASE_URL and DATABASE_URL.strip():
     # Production: PostgreSQL with pgvector
     DATABASES = {
         'default': dj_database_url.parse(
@@ -269,3 +269,9 @@ LOGGING = {
         },
     },
 }
+
+# Authentication Settings
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'index'
+AUTH_USER_MODEL = 'core.MuseumStaff'

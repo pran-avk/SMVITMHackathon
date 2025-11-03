@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Museum Registration - ArtScope</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .messages {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .messages.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .messages.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .redirect-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .redirect-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .redirect-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-content {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('register')">
+                📝 Register Museum
+            </div>
+            <div class="tab" onclick="switchTab('login')">
+                🔐 Staff Login
+            </div>
+        </div>
+
+        <!-- Register Tab -->
+        <div id="register-content" class="tab-content active">
+            <h2>Register Your Museum</h2>
+            <p class="subtitle">Join ArtScope and bring your collection to life with AR technology</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="messages {{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <h3 style="margin: 30px 0 20px; color: #667eea;">Museum Information</h3>
+                
+                <div class="form-group">
+                    <label for="{{ museum_form.name.id_for_label }}">Museum Name *</label>
+                    {{ museum_form.name }}
+                    {% if museum_form.name.errors %}
+                        <div class="error">{{ museum_form.name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ museum_form.description.id_for_label }}">Description</label>
+                    {{ museum_form.description }}
+                    <span class="help-text">Tell visitors about your museum</span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ museum_form.location.id_for_label }}">Location *</label>
+                        {{ museum_form.location }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ museum_form.contact_email.id_for_label }}">Contact Email *</label>
+                        {{ museum_form.contact_email }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ museum_form.website.id_for_label }}">Website</label>
+                    {{ museum_form.website }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ museum_form.logo.id_for_label }}">Museum Logo</label>
+                    {{ museum_form.logo }}
+                    <span class="help-text">Upload your museum's logo (optional)</span>
+                </div>
+
+                <h3 style="margin: 30px 0 20px; color: #667eea;">Your Account Information</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ staff_form.first_name.id_for_label }}">First Name *</label>
+                        {{ staff_form.first_name }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ staff_form.last_name.id_for_label }}">Last Name *</label>
+                        {{ staff_form.last_name }}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ staff_form.username.id_for_label }}">Username *</label>
+                        {{ staff_form.username }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ staff_form.email.id_for_label }}">Email *</label>
+                        {{ staff_form.email }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ staff_form.phone.id_for_label }}">Phone Number</label>
+                    {{ staff_form.phone }}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ staff_form.password1.id_for_label }}">Password *</label>
+                        {{ staff_form.password1 }}
+                        {% if staff_form.password1.errors %}
+                            <div class="error">{{ staff_form.password1.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ staff_form.password2.id_for_label }}">Confirm Password *</label>
+                        {{ staff_form.password2 }}
+                        {% if staff_form.password2.errors %}
+                            <div class="error">{{ staff_form.password2.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">🎨 Create Museum Account</button>
+
+                <div class="redirect-link">
+                    Already registered? <a href="#" onclick="switchTab('login'); return false;">Login here</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Login Tab -->
+        <div id="login-content" class="tab-content">
+            <h2>Museum Staff Login</h2>
+            <p class="subtitle">Access your museum dashboard and manage your collection</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="messages {{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">Username</label>
+                    {{ form.username }}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}">Password</label>
+                    {{ form.password }}
+                </div>
+
+                <button type="submit" class="btn">🔓 Login to Dashboard</button>
+
+                <div class="redirect-link">
+                    Don't have an account? <a href="#" onclick="switchTab('register'); return false;">Register your museum</a>
+                </div>
+
+                <div class="redirect-link" style="margin-top: 10px;">
+                    <a href="{% url 'index' %}">← Back to Home</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            // Add active class to selected tab
+            if (tab === 'register') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('register-content').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('login-content').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

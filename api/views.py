@@ -441,3 +441,46 @@ def health_check(request):
         'status': 'healthy',
         'timestamp': timezone.now().isoformat()
     })
+
+
+class VisitorSessionViewSet(viewsets.ModelViewSet):
+    """
+    Visitor session management for anonymous tracking
+    """
+    queryset = VisitorSession.objects.all()
+    serializer_class = VisitorSessionSerializer
+    permission_classes = [AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new visitor session
+        POST /api/sessions/
+        {
+            "museum_id": "uuid",
+            "analytics_consent": true
+        }
+        """
+        museum_id = request.data.get('museum_id')
+        analytics_consent = request.data.get('analytics_consent', True)
+        
+        # Get museum or create default
+        if museum_id:
+            museum = get_object_or_404(Museum, id=museum_id)
+        else:
+            # Get first active museum as default
+            museum = Museum.objects.filter(is_active=True).first()
+            if not museum:
+                return Response(
+                    {'error': 'No active museum found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Create session
+        session = VisitorSession.objects.create(
+            museum=museum,
+            analytics_consent=analytics_consent,
+            session_start=timezone.now()
+        )
+        
+        serializer = self.get_serializer(session)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

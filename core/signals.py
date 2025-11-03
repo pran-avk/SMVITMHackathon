@@ -1,10 +1,12 @@
 """
-Django Signals for Automatic Embedding Generation
+Django Signals for Automatic Embedding Generation and Translation
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import Artwork, CachedEmbedding, SystemLog
 from embeddings.tasks import generate_artwork_embedding
+from core.translation_utils import auto_translate_artwork
+from core.geolocation_utils import generate_qr_code
 
 
 @receiver(post_save, sender=Artwork)
@@ -27,6 +29,43 @@ def auto_generate_embedding(sender, instance, created, **kwargs):
                 'museum': instance.museum.name
             }
         )
+
+
+@receiver(post_save, sender=Artwork)
+def auto_translate_description(sender, instance, created, **kwargs):
+    """
+    Automatically translate artwork description to all supported languages
+    Runs when artwork is created or description is updated
+    """
+    if created:
+        try:
+            # Auto-translate to all languages
+            auto_translate_artwork(instance)
+            
+            # Generate QR code
+            if not instance.qr_code:
+                qr_file = generate_qr_code(instance)
+                instance.qr_code.save(f'qr_{instance.id}.png', qr_file, save=True)
+            
+            # Log the action
+            SystemLog.objects.create(
+                log_type='translation',
+                message=f'Auto-translation completed for artwork: {instance.title}',
+                metadata={
+                    'artwork_id': str(instance.id),
+                    'artwork_title': instance.title,
+                    'languages': 13  # Total supported languages
+                }
+            )
+        except Exception as e:
+            SystemLog.objects.create(
+                log_type='error',
+                message=f'Auto-translation failed: {str(e)}',
+                metadata={
+                    'artwork_id': str(instance.id),
+                    'error': str(e)
+                }
+            )
 
 
 @receiver(post_delete, sender=Artwork)

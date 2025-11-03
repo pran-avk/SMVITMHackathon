@@ -4,7 +4,7 @@ API URL Configuration
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    MuseumViewSet, ArtistViewSet, ArtworkViewSet,
+    MuseumViewSet, ArtistViewSet, ArtworkViewSet, VisitorSessionViewSet,
     scan_artwork, log_interaction, submit_feedback,
     get_recommendations, opt_out_analytics, health_check
 )
@@ -14,6 +14,7 @@ router = DefaultRouter()
 router.register(r'museums', MuseumViewSet, basename='museum')
 router.register(r'artists', ArtistViewSet, basename='artist')
 router.register(r'artworks', ArtworkViewSet, basename='artwork')
+router.register(r'sessions', VisitorSessionViewSet, basename='session')
 
 urlpatterns = [
     # ViewSet routes

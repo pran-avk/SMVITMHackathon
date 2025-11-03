@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from core.views import register_view, login_view, logout_view, dashboard_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -18,8 +19,14 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
+    # Museum Staff Authentication
+    path('register/', register_view, name='register'),
+    path('login/', login_view, name='login'),
+    path('logout/', logout_view, name='logout'),
+    path('dashboard/', dashboard_view, name='dashboard'),
+    
     # Frontend Templates (No map requirement)
-    path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('', TemplateView.as_view(template_name='index.html'), name='index'),
     path('scanner/', TemplateView.as_view(template_name='scanner.html'), name='scanner'),
     path('artwork-details/', TemplateView.as_view(template_name='artwork_details.html'), name='artwork_details'),
 ]

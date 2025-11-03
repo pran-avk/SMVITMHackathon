@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Scanner - ArtScope</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #camera {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .scan-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 3px solid rgba(102, 126, 234, 0.8);
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+
+        .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #667eea;
+        }
+
+        .corner.top-left { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+        .corner.top-right { top: -3px; right: -3px; border-left: none; border-bottom: none; }
+        .corner.bottom-left { bottom: -3px; left: -3px; border-right: none; border-top: none; }
+        .corner.bottom-right { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+
+        /* AR Description Overlay */
+        .ar-description {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 100%);
+            backdrop-filter: blur(20px);
+            padding: 25px 20px 40px;
+            color: white;
+            transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: auto;
+            z-index: 100;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .ar-description.visible {
+            bottom: 0;
+        }
+
+        .ar-description.locked {
+            border-top: 3px solid #667eea;
+        }
+
+        .artwork-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .artwork-artist {
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 15px;
+        }
+
+        .artwork-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 20px;
+        }
+
+        /* Control Buttons */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 200;
+            pointer-events: auto;
+            padding: 0 20px;
+        }
+
+        .control-btn {
+            padding: 14px 28px;
+            border-radius: 50px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .capture-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .capture-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .capture-btn.locked {
+            background: #28a745;
+        }
+
+        .audio-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .audio-btn:hover {
+            background: white;
+        }
+
+        .audio-btn.playing {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Status Messages */
+        .status-bar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            z-index: 150;
+            pointer-events: none;
+            display: none;
+        }
+
+        .status-bar.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .status-bar.error {
+            background: rgba(231, 76, 60, 0.9);
+        }
+
+        .status-bar.success {
+            background: rgba(40, 167, 69, 0.9);
+        }
+
+        .status-bar.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+        }
+
+        /* Language Selector */
+        .language-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 150;
+            pointer-events: auto;
+        }
+
+        .language-selector select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Camera Feed -->
+    <video id="camera" autoplay playsinline></video>
+
+    <!-- Scan Frame Overlay -->
+    <div class="overlay">
+        <div class="scan-frame">
+            <div class="corner top-left"></div>
+            <div class="corner top-right"></div>
+            <div class="corner bottom-left"></div>
+            <div class="corner bottom-right"></div>
+        </div>
+    </div>
+
+    <!-- Language Selector -->
+    <div class="language-selector">
+        <select id="languageSelect">
+            <option value="en">🇬🇧 English</option>
+            <option value="es">🇪🇸 Español</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="it">🇮🇹 Italiano</option>
+            <option value="zh">🇨🇳 中文</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="ar">🇸🇦 العربية</option>
+            <option value="hi">🇮🇳 हिंदी</option>
+            <option value="kn">🇮🇳 ಕನ್ನಡ (Kannada)</option>
+            <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
+            <option value="te">🇮🇳 తెలుగు (Telugu)</option>
+            <option value="ml">🇮🇳 മലയാളം (Malayalam)</option>
+            <option value="pt">🇧🇷 Português</option>
+        </select>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="statusBar" class="status-bar"></div>
+
+    <!-- AR Description Overlay -->
+    <div id="arDescription" class="ar-description">
+        <div class="artwork-title" id="artworkTitle">Scanning...</div>
+        <div class="artwork-artist" id="artworkArtist"></div>
+        <div class="artwork-text" id="artworkDescription"></div>
+    </div>
+
+    <!-- Control Buttons -->
+    <div class="controls" id="controls" style="display: none;">
+        <button class="control-btn capture-btn" id="captureBtn">
+            📌 Capture View
+        </button>
+        <button class="control-btn audio-btn" id="audioBtn">
+            🔊 Play Audio
+        </button>
+    </div>
+
+    <!-- Hidden Audio Element -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        let camera;
+        let userLocation = null;
+        let currentArtwork = null;
+        let isLocked = false;
+        let audioPlaying = false;
+        let speechSynthesis = window.speechSynthesis;
+        let currentUtterance = null;
+
+        // Initialize camera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                camera = document.getElementById('camera');
+                camera.srcObject = stream;
+                showStatus('Camera ready. Point at artwork to scan.', 'success');
+            } catch (error) {
+                showStatus('Camera access denied. Please enable camera permissions.', 'error');
+            }
+        }
+
+        // Get user location
+        function getUserLocation() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        console.log('User location:', userLocation);
+                    },
+                    (error) => {
+                        showStatus('Location access required for geofencing', 'warning');
+                    }
+                );
+
+                // Watch position continuously
+                navigator.geolocation.watchPosition((position) => {
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    };
+                });
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = `status-bar show ${type}`;
+            setTimeout(() => {
+                statusBar.classList.remove('show');
+            }, 3000);
+        }
+
+        // Simulate artwork detection (replace with actual ML model)
+        function detectArtwork() {
+            // This would be replaced with actual image recognition
+            // For now, simulate detection after 2 seconds
+            setTimeout(() => {
+                // Simulated artwork data
+                const artwork = {
+                    id: '123',
+                    title: 'Mona Lisa',
+                    artist: 'Leonardo da Vinci',
+                    description: 'The Mona Lisa is a half-length portrait painting by Italian artist Leonardo da Vinci. Considered an archetypal masterpiece of the Italian Renaissance...',
+                    latitude: 48.8606,
+                    longitude: 2.3376,
+                    geofence_radius: 100,
+                    audio_url: null,
+                    language: 'en'
+                };
+                
+                handleArtworkDetected(artwork);
+            }, 2000);
+        }
+
+        // Handle artwork detection
+        async function handleArtworkDetected(artwork) {
+            // Check geofence
+            if (userLocation && artwork.latitude && artwork.longitude) {
+                const geofenceCheck = await checkGeofence(
+                    userLocation.lat,
+                    userLocation.lon,
+                    artwork.latitude,
+                    artwork.longitude,
+                    artwork.geofence_radius
+                );
+
+                if (!geofenceCheck.allowed) {
+                    showStatus(`⛔ You must be inside the museum to view this artwork. Distance: ${geofenceCheck.distance}m`, 'error');
+                    return;
+                }
+            }
+
+            // Display artwork info
+            currentArtwork = artwork;
+            showArtworkInfo(artwork);
+            document.getElementById('controls').style.display = 'flex';
+        }
+
+        // Check geofence via API
+        async function checkGeofence(userLat, userLon, artworkLat, artworkLon, radius) {
+            try {
+                const response = await fetch('/api/check-geofence/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_lat: userLat,
+                        user_lon: userLon,
+                        artwork_lat: artworkLat,
+                        artwork_lon: artworkLon,
+                        radius: radius
+                    })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Geofence check failed:', error);
+                return { allowed: true }; // Fallback to allow
+            }
+        }
+
+        // Show artwork info
+        function showArtworkInfo(artwork) {
+            document.getElementById('artworkTitle').textContent = artwork.title;
+            document.getElementById('artworkArtist').textContent = `by ${artwork.artist}`;
+            document.getElementById('artworkDescription').textContent = artwork.description;
+            document.getElementById('arDescription').classList.add('visible');
+        }
+
+        // Hide artwork info
+        function hideArtworkInfo() {
+            if (!isLocked) {
+                document.getElementById('arDescription').classList.remove('visible');
+                document.getElementById('controls').style.display = 'none';
+            }
+        }
+
+        // Capture/Lock button
+        document.getElementById('captureBtn').addEventListener('click', function() {
+            isLocked = !isLocked;
+            const btn = this;
+            const arDesc = document.getElementById('arDescription');
+            
+            if (isLocked) {
+                btn.textContent = '🔓 Release View';
+                btn.classList.add('locked');
+                arDesc.classList.add('locked');
+                showStatus('View captured! You can move around freely.', 'success');
+            } else {
+                btn.textContent = '📌 Capture View';
+                btn.classList.remove('locked');
+                arDesc.classList.remove('locked');
+                showStatus('View released', 'info');
+            }
+        });
+
+        // Audio playback button
+        document.getElementById('audioBtn').addEventListener('click', function() {
+            if (!currentArtwork) return;
+
+            const btn = this;
+            
+            if (audioPlaying) {
+                // Stop audio
+                stopAudio();
+                btn.textContent = '🔊 Play Audio';
+                btn.classList.remove('playing');
+            } else {
+                // Play audio (TTS or uploaded audio)
+                playAudio(currentArtwork);
+                btn.textContent = '⏸ Stop Audio';
+                btn.classList.add('playing');
+            }
+        });
+
+        // Play audio narration
+        function playAudio(artwork) {
+            audioPlaying = true;
+
+            if (artwork.audio_url) {
+                // Play uploaded audio file
+                const player = document.getElementById('audioPlayer');
+                player.src = artwork.audio_url;
+                player.play();
+                player.onended = () => {
+                    audioPlaying = false;
+                    document.getElementById('audioBtn').textContent = '🔊 Play Audio';
+                    document.getElementById('audioBtn').classList.remove('playing');
+                };
+            } else {
+                // Use text-to-speech
+                if (speechSynthesis) {
+                    currentUtterance = new SpeechSynthesisUtterance(artwork.description);
+                    currentUtterance.lang = artwork.language || 'en-US';
+                    currentUtterance.onend = () => {
+                        audioPlaying = false;
+                        document.getElementById('audioBtn').textContent = '🔊 Play Audio';
+                        document.getElementById('audioBtn').classList.remove('playing');
+                    };
+                    speechSynthesis.speak(currentUtterance);
+                }
+            }
+        }
+
+        // Stop audio
+        function stopAudio() {
+            audioPlaying = false;
+            const player = document.getElementById('audioPlayer');
+            player.pause();
+            player.currentTime = 0;
+            
+            if (speechSynthesis) {
+                speechSynthesis.cancel();
+            }
+        }
+
+        // Language change
+        document.getElementById('languageSelect').addEventListener('change', async function() {
+            const language = this.value;
+            if (currentArtwork) {
+                // Fetch translation
+                try {
+                    const response = await fetch(`/api/artworks/${currentArtwork.id}/translation/${language}/`);
+                    const translation = await response.json();
+                    
+                    document.getElementById('artworkTitle').textContent = translation.title;
+                    document.getElementById('artworkDescription').textContent = translation.description;
+                    currentArtwork.language = language;
+                    currentArtwork.audio_url = translation.audio_url;
+                    
+                    showStatus(`Language changed to ${this.options[this.selectedIndex].text}`, 'success');
+                } catch (error) {
+                    showStatus('Translation not available', 'warning');
+                }
+            }
+        });
+
+        // Monitor camera movement (simplified - replace with actual ML tracking)
+        let lastCheck = Date.now();
+        setInterval(() => {
+            if (!isLocked && currentArtwork && (Date.now() - lastCheck > 1000)) {
+                // Simulate checking if artwork is still in frame
+                // In production, use ML model to detect if artwork is visible
+                const stillInFrame = Math.random() > 0.3; // Simulate
+                
+                if (!stillInFrame) {
+                    hideArtworkInfo();
+                    stopAudio();
+                }
+                lastCheck = Date.now();
+            }
+        }, 1000);
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initCamera();
+            getUserLocation();
+            detectArtwork(); // Start detection
+        });
+    </script>
+</body>
+</html>
