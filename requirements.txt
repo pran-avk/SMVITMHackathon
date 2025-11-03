@@ -31,9 +31,10 @@ requests==2.31.0
 numpy==1.26.3
 django-sslserver==0.22
 
-# QR Code & Geolocation (Required for new features)
-qrcode==7.4.2
+# Geolocation (Required for geofencing)
 geopy==2.4.1
+
+# Text-to-Speech (Required for audio narration)
 gtts==2.5.0
 
 # Translation (Auto-translate descriptions)

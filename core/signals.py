@@ -6,7 +6,6 @@ from django.dispatch import receiver
 from .models import Artwork, CachedEmbedding, SystemLog
 from embeddings.tasks import generate_artwork_embedding
 from core.translation_utils import auto_translate_artwork
-from core.geolocation_utils import generate_qr_code
 
 
 @receiver(post_save, sender=Artwork)
@@ -41,11 +40,6 @@ def auto_translate_description(sender, instance, created, **kwargs):
         try:
             # Auto-translate to all languages
             auto_translate_artwork(instance)
-            
-            # Generate QR code
-            if not instance.qr_code:
-                qr_file = generate_qr_code(instance)
-                instance.qr_code.save(f'qr_{instance.id}.png', qr_file, save=True)
             
             # Log the action
             SystemLog.objects.create(

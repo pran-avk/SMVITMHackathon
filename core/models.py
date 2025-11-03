@@ -152,9 +152,6 @@ class Artwork(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     geofence_radius_meters = models.IntegerField(default=100, help_text="Radius in meters for geofencing")
     
-    # QR Code for fallback scanning
-    qr_code = models.ImageField(upload_to='artworks/qrcodes/', blank=True, null=True)
-    
     # Media Files
     image = models.ImageField(
         upload_to='artworks/images/',
