@@ -171,6 +171,104 @@
             font-size: 12px;
             color: rgba(255, 255, 255, 0.4);
         }
+
+        /* Welcome Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, rgba(100, 60, 130, 0.95), rgba(80, 50, 110, 0.95));
+            border-radius: 30px;
+            padding: 50px 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            font-size: 50px;
+        }
+
+        .modal h2 {
+            font-size: 28px;
+            color: #8B9FFF;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .modal p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(90deg, #7B8CFF 0%, #6B7CFF 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(123, 140, 255, 0.4);
+        }
+
+        .privacy-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .privacy-note svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .privacy-note p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+        }
+
+        .privacy-note strong {
+            color: #FFD700;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -214,7 +312,43 @@
         </div>
     </div>
 
+    <!-- Welcome Modal -->
+    <div class="modal-overlay active" id="welcomeModal">
+        <div class="modal">
+            <div class="modal-icon">🎨</div>
+            <h2>Welcome to the Gallery Guide</h2>
+            <p>
+                Unlock the stories behind the art. Simply point your camera at a painting to learn more. No account needed.
+            </p>
+            <button class="modal-btn" onclick="acceptAndStart()">Start Scanning</button>
+            
+            <div class="privacy-note">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <p>
+                    <strong>Help Us Improve Your Experience</strong><br>
+                    We collect anonymous data about which artworks are scanned to enhance your museum experience.
+                </p>
+            </div>
+
+            <div style="margin-top: 25px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <p style="font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 12px;">Museum Staff?</p>
+                <a href="/register/" style="display: inline-block; padding: 10px 24px; border: 2px solid rgba(139, 159, 255, 0.5); border-radius: 20px; color: #8B9FFF; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;">
+                    🏛️ Register Your Museum
+                </a>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function acceptAndStart() {
+            // Hide modal
+            document.getElementById('welcomeModal').classList.remove('active');
+            // Start scanning
+            startScanning();
+        }
+
         function startScanning() {
             // Create session and redirect to scanner
             fetch('/api/sessions/', {

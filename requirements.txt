@@ -39,12 +39,12 @@ gtts==2.5.0
 # Translation (Auto-translate descriptions)
 deep-translator==1.11.4
 
-# Optional: AI/ML for Image Embeddings (Install separately if needed)
-# torch==2.5.1
-# torchvision==0.20.1
-# transformers==4.36.2
-# sentence-transformers==2.2.2
-# git+https://github.com/openai/CLIP.git
+# AI/ML for Image Embeddings (CLIP)
+torch==2.5.1
+torchvision==0.20.1
+transformers==4.36.2
+sentence-transformers==2.2.2
+git+https://github.com/openai/CLIP.git
 
 # Optional: Advanced Features
 # textblob==0.17.1
