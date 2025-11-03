@@ -5,8 +5,15 @@ Advanced database models with vector embeddings, analytics, and privacy features
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import FileExtensionValidator
-from pgvector.django import VectorField
+from django.conf import settings
 import uuid
+
+# Conditionally import pgvector for PostgreSQL
+try:
+    from pgvector.django import VectorField
+    VECTOR_AVAILABLE = True
+except ImportError:
+    VECTOR_AVAILABLE = False
 
 
 class Museum(models.Model):
@@ -88,8 +95,11 @@ class Artist(models.Model):
     style = models.CharField(max_length=100, blank=True)
     movement = models.CharField(max_length=100, blank=True)
     
-    # Style embedding for artist-based recommendations
-    style_embedding = VectorField(dimensions=512, null=True, blank=True)
+    # Style embedding for artist-based recommendations (PostgreSQL only)
+    if VECTOR_AVAILABLE:
+        style_embedding = VectorField(dimensions=512, null=True, blank=True)
+    else:
+        style_embedding = models.BinaryField(null=True, blank=True)  # Fallback for SQLite
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -155,8 +165,12 @@ class Artwork(models.Model):
         validators=[FileExtensionValidator(['mp3', 'wav', 'ogg'])]
     )
     
-    # Vector Embedding (512-dimensional CLIP embedding)
-    embedding = VectorField(dimensions=512, null=True, blank=True)
+    # Vector Embedding (512-dimensional CLIP embedding - PostgreSQL only)
+    if VECTOR_AVAILABLE:
+        embedding = VectorField(dimensions=512, null=True, blank=True)
+    else:
+        embedding = models.BinaryField(null=True, blank=True)  # Fallback for SQLite
+        
     embedding_model = models.CharField(max_length=50, default='clip-ViT-B-32')
     embedding_generated_at = models.DateTimeField(null=True, blank=True)
     
@@ -298,11 +312,16 @@ class VisitorFeedback(models.Model):
 
 class CachedEmbedding(models.Model):
     """
-    Cache frequently accessed embeddings for performance
+    Cache frequently accessed embeddings for performance (PostgreSQL only)
     """
     
     artwork = models.OneToOneField(Artwork, on_delete=models.CASCADE, related_name='cached_embedding')
-    embedding = VectorField(dimensions=512)
+    
+    if VECTOR_AVAILABLE:
+        embedding = VectorField(dimensions=512)
+    else:
+        embedding = models.BinaryField(null=True, blank=True)  # Fallback for SQLite
+        
     access_count = models.IntegerField(default=0)
     last_accessed = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -6,9 +6,13 @@ import os
 from pathlib import Path
 import dj_database_url
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Security
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
@@ -72,14 +76,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'artscope.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': dj_database_url.parse(
-        os.getenv('DATABASE_URL', 
-                  'postgresql://neondb_owner:npg_Qwn8HUECP4oz@ep-polished-glade-a1lfsvog-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+# Use PostgreSQL in production (Render), SQLite for local development
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+if DATABASE_URL:
+    # Production: PostgreSQL with pgvector
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    # Local development: SQLite (AI features will be limited)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -106,6 +122,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom user model
+AUTH_USER_MODEL = 'core.MuseumStaff'
 
 # REST Framework
 REST_FRAMEWORK = {
