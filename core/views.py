@@ -163,3 +163,33 @@ def upload_artwork_submit(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+@require_http_methods(["POST"])
+def delete_artwork_view(request, artwork_id):
+    """Delete an artwork"""
+    try:
+        # Get the artwork
+        artwork = Artwork.objects.get(id=artwork_id)
+        
+        # Check if user has permission (must be from same museum)
+        if artwork.museum != request.user.museum:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Store title for response
+        artwork_title = artwork.title
+        
+        # Delete the artwork (this will also delete the image file)
+        artwork.delete()
+        
+        messages.success(request, f'Artwork "{artwork_title}" deleted successfully!')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Artwork "{artwork_title}" deleted successfully'
+        })
+        
+    except Artwork.DoesNotExist:
+        return JsonResponse({'error': 'Artwork not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

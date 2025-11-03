@@ -153,10 +153,17 @@
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             transition: background 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .artwork-item:hover {
             background: #f8f9fa;
+        }
+
+        .artwork-info {
+            flex: 1;
         }
 
         .artwork-title {
@@ -168,6 +175,40 @@
         .artwork-meta {
             font-size: 14px;
             color: #666;
+        }
+
+        .artwork-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .edit-btn {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            background: #5568d3;
         }
 
         .empty-state {
@@ -221,12 +262,18 @@
             {% if artworks %}
             <div class="artwork-list">
                 {% for artwork in artworks %}
-                <div class="artwork-item">
-                    <div class="artwork-title">{{ artwork.title }}</div>
-                    <div class="artwork-meta">
-                        {% if artwork.artist %}by {{ artwork.artist.name }}{% endif %}
-                        | {{ artwork.category|title }}
-                        {% if artwork.year_created %}| {{ artwork.year_created }}{% endif %}
+                <div class="artwork-item" id="artwork-{{ artwork.id }}">
+                    <div class="artwork-info">
+                        <div class="artwork-title">{{ artwork.title }}</div>
+                        <div class="artwork-meta">
+                            {% if artwork.artist %}by {{ artwork.artist.name }}{% endif %}
+                            | {{ artwork.category|title }}
+                            {% if artwork.year_created %}| {{ artwork.year_created }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="artwork-actions">
+                        <a href="/admin/core/artwork/{{ artwork.id }}/change/" class="edit-btn">✏️ Edit</a>
+                        <button onclick="deleteArtwork('{{ artwork.id }}', '{{ artwork.title }}')" class="delete-btn">🗑️ Delete</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -248,5 +295,97 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function deleteArtwork(artworkId, artworkTitle) {
+            if (!confirm(`Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            const artworkElement = document.getElementById(`artwork-${artworkId}`);
+            
+            // Show loading state
+            if (artworkElement) {
+                artworkElement.style.opacity = '0.5';
+                artworkElement.style.pointerEvents = 'none';
+            }
+
+            fetch(`/delete-artwork/${artworkId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the artwork item with animation
+                    if (artworkElement) {
+                        artworkElement.style.transition = 'all 0.3s ease';
+                        artworkElement.style.transform = 'translateX(-100%)';
+                        artworkElement.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            artworkElement.remove();
+                            
+                            // Check if list is empty
+                            const artworkList = document.querySelector('.artwork-list');
+                            if (artworkList && artworkList.children.length === 0) {
+                                location.reload(); // Reload to show empty state
+                            }
+                        }, 300);
+                    }
+                    
+                    // Update stats
+                    updateStats();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete artwork'));
+                    if (artworkElement) {
+                        artworkElement.style.opacity = '1';
+                        artworkElement.style.pointerEvents = 'auto';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete artwork. Please try again.');
+                if (artworkElement) {
+                    artworkElement.style.opacity = '1';
+                    artworkElement.style.pointerEvents = 'auto';
+                }
+            });
+        }
+
+        function updateStats() {
+            // Reload page to update stats
+            setTimeout(() => {
+                const statCards = document.querySelectorAll('.stat-number');
+                if (statCards[0]) {
+                    const currentCount = parseInt(statCards[0].textContent);
+                    statCards[0].textContent = currentCount - 1;
+                }
+                if (statCards[1]) {
+                    const currentActive = parseInt(statCards[1].textContent);
+                    statCards[1].textContent = Math.max(0, currentActive - 1);
+                }
+            }, 300);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
 </body>
 </html>
