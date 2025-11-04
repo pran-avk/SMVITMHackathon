@@ -446,11 +446,14 @@
                         
                         if (data.success && data.artworks.length > 0) {
                             locationArtworks = data.artworks;
-                            showStatus(`✅ ${data.count} artworks loaded! Start scanning!`, 'success');
+                            showStatus(`✅ ${data.count} artworks loaded! Auto-scanning active!`, 'success');
                             setTimeout(() => hideStatus(), 2000);
                             
-                            // Start auto-scanning
-                            startAutoScan();
+                            // Start auto-scanning immediately
+                            setTimeout(() => {
+                                startAutoScan();
+                                console.log('🔍 Auto-scanning started!');
+                            }, 500);
                         } else {
                             showStatus('⚠️ No artworks nearby. Move closer!', 'warning');
                         }
@@ -495,12 +498,22 @@
 
         // Start auto-scanning
         function startAutoScan() {
-            if (!autoScanInterval && !isLocked) {
+            // Clear any existing interval first
+            if (autoScanInterval) {
+                clearInterval(autoScanInterval);
+            }
+            
+            if (!isLocked && locationArtworks.length > 0) {
+                console.log('🔄 Starting auto-scan interval...');
                 autoScanInterval = setInterval(() => {
-                    if (!isLocked) {
+                    if (!isLocked && locationArtworks.length > 0) {
+                        console.log('📸 Auto-scanning...');
                         captureAndMatch();
                     }
                 }, 1500); // Scan every 1.5 seconds
+                
+                // Do first scan immediately
+                captureAndMatch();
             }
         }
 
