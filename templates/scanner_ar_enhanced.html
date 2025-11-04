@@ -601,13 +601,37 @@
             const delta = maxSimilarity - second;
             
             if (maxSimilarity > 0.20 && (delta > 0.03 || !currentMatch || currentMatch.id !== bestMatch.id)) {
-                console.log('✅ Showing ONLY the highest match');
+                console.log('✅ Highest match confirmed. Opening details page...');
                 currentMatch = bestMatch;
                 currentSimilarity = maxSimilarity;
-                showARView(bestMatch, maxSimilarity);
+                openDetailsPage(bestMatch, maxSimilarity);
             } else {
                 console.log('❌ Best match below 20% threshold - not showing anything');
                 hideARView();
+            }
+        }
+
+        // Persist match and open dedicated details page
+        function openDetailsPage(artwork, similarity) {
+            try {
+                // Stop scanning immediately to avoid re-triggers
+                stopAutoScan();
+                if (stream) {
+                    stream.getTracks().forEach(t => t.stop());
+                }
+                
+                const payload = {
+                    artwork: artwork,
+                    similarity_score: similarity,
+                    recommendations: []
+                };
+                sessionStorage.setItem('scanned_artwork', JSON.stringify(payload));
+                
+                // Navigate to details page
+                window.location.href = '/artwork-details/';
+            } catch (e) {
+                console.error('Failed to open details page:', e);
+                showARView(artwork, similarity); // fallback to AR overlay
             }
         }
 
