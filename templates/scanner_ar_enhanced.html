@@ -112,56 +112,28 @@
             z-index: 50;
             pointer-events: auto;
             display: flex;
-            gap: 20px;
+            justify-content: center;
             align-items: center;
         }
 
-        .scan-btn {
-            width: 80px;
-            height: 80px;
+        .lock-btn {
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             border: 4px solid white;
             background: rgba(255, 215, 0, 0.9);
             cursor: pointer;
-            transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: 32px;
+            transition: all 0.3s;
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
         }
 
-        .scan-btn.locked {
+        .lock-btn.active {
             background: rgba(255, 68, 68, 0.9);
             box-shadow: 0 0 30px rgba(255, 68, 68, 0.6);
-        }
-
-        .scan-btn.scanning {
-            animation: scanning 1s infinite;
-        }
-
-        @keyframes scanning {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .lock-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 3px solid white;
-            background: rgba(128, 128, 128, 0.9);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            transition: all 0.3s;
-        }
-
-        .lock-btn.active {
-            background: rgba(255, 215, 0, 0.9);
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
         }
 
         .language-selector {
@@ -383,10 +355,9 @@
             <div class="corner br"></div>
         </div>
 
-        <!-- Scan Controls -->
+        <!-- Lock Control -->
         <div class="scan-btn-container">
             <button class="lock-btn" id="lock-btn" onclick="toggleLock()">🔓</button>
-            <button class="scan-btn" id="scan-btn" onclick="handleScan()">📷</button>
         </div>
 
         <!-- Status Message -->
@@ -505,35 +476,21 @@
         function toggleLock() {
             isLocked = !isLocked;
             const lockBtn = document.getElementById('lock-btn');
-            const scanBtn = document.getElementById('scan-btn');
             
             if (isLocked) {
                 lockBtn.textContent = '🔒';
                 lockBtn.classList.add('active');
-                scanBtn.classList.add('locked');
                 stopAutoScan();
                 showStatus('🔒 Locked! Match will persist', 'success');
             } else {
                 lockBtn.textContent = '🔓';
                 lockBtn.classList.remove('active');
-                scanBtn.classList.remove('locked');
                 hideARView();
                 startAutoScan();
-                showStatus('🔓 Unlocked! Auto-scanning...', 'success');
+                showStatus('🔓 Auto-scanning resumed...', 'success');
             }
             
             setTimeout(() => hideStatus(), 2000);
-        }
-
-        // Handle scan button
-        function handleScan() {
-            if (isLocked) {
-                // Unlock and resume scanning
-                toggleLock();
-            } else {
-                // Manual scan
-                captureAndMatch();
-            }
         }
 
         // Start auto-scanning
