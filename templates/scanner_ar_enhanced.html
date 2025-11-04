@@ -168,6 +168,60 @@
             height: 100%;
         }
 
+        /* Details Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal-card {
+            width: min(920px, 94vw);
+            max-height: 90vh;
+            background: linear-gradient(180deg, rgba(20,20,20,0.95), rgba(10,10,10,0.95));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 0;
+            box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+        }
+
+        .modal-image {
+            position: relative;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .modal-body { padding: 24px; overflow: auto; }
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 999px; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.35); color: #FFD700; font-weight: 600; font-size: 12px; }
+        .modal-title { font-size: 28px; font-weight: 800; margin-top: 12px; }
+        .modal-artist { color: #ddd; margin-top: 6px; }
+        .modal-desc { margin-top: 14px; line-height: 1.6; color: #eaeaea; }
+        .modal-actions { margin-top: 20px; display: flex; gap: 12px; }
+        .btn {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            cursor: pointer;
+        }
+        .btn.primary { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.15); color: #ffd700; }
+        .btn:hover { background: rgba(255,255,255,0.12); }
+
         .artwork-info-overlay {
             position: absolute;
             bottom: 120px;
@@ -343,6 +397,26 @@
                 <div class="similarity-badge" id="similarity-badge"></div>
                 <div class="artwork-title" id="artwork-title"></div>
                 <div class="artwork-artist" id="artwork-artist"></div>
+            </div>
+        </div>
+
+        <!-- Details Modal Popup -->
+        <div class="modal-overlay" id="details-modal">
+            <div class="modal-card">
+                <div class="modal-image">
+                    <img id="modal-artwork-image" src="" alt="Artwork" />
+                </div>
+                <div class="modal-body">
+                    <span class="badge" id="modal-similarity"></span>
+                    <div class="modal-title" id="modal-title"></div>
+                    <div class="modal-artist" id="modal-artist"></div>
+                    <div class="modal-desc" id="modal-desc"></div>
+                    <div class="modal-actions">
+                        <button class="btn" id="modal-tts-btn" onclick="speakArtworkInfo()">🔊 Listen</button>
+                        <button class="btn" onclick="closeArtworkModal()">✕ Close</button>
+                        <button class="btn primary" onclick="openDetailsPage(currentMatch, currentSimilarity)">Open Full Page →</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -548,17 +622,47 @@
             const delta = maxSimilarity - second;
             
             if (maxSimilarity > 0.20 && (delta > 0.03 || !currentMatch || currentMatch.id !== bestMatch.id)) {
-                console.log('✅ Highest match confirmed. Opening details page...');
+                console.log('✅ Highest match confirmed. Showing popup modal...');
                 currentMatch = bestMatch;
                 currentSimilarity = maxSimilarity;
-                openDetailsPage(bestMatch, maxSimilarity);
+                showArtworkModal(bestMatch, maxSimilarity);
             } else {
                 console.log('❌ Best match below 20% threshold - not showing anything');
                 hideARView();
             }
         }
 
-        // Persist match and open dedicated details page
+        // Show popup modal with details (pause scanning)
+        function showArtworkModal(artwork, similarity) {
+            try {
+                stopAutoScan();
+                // Keep camera running behind the modal for seamless UX
+                const modal = document.getElementById('details-modal');
+                document.getElementById('modal-artwork-image').src = artwork.image;
+                document.getElementById('modal-similarity').textContent = `${(similarity * 100).toFixed(0)}% Match`;
+                document.getElementById('modal-title').textContent = artwork.title;
+                document.getElementById('modal-artist').textContent = `by ${artwork.artist_name || 'Unknown'}`;
+                document.getElementById('modal-desc').textContent = artwork.description || 'No description available.';
+                modal.classList.add('show');
+                // TTS button visible when a match is active
+                const ttsBtn = document.getElementById('modal-tts-btn');
+                if (ttsBtn) ttsBtn.style.display = 'inline-flex';
+            } catch (e) {
+                console.error('Failed to open modal:', e);
+                // Fallback: keep AR overlay as backup UI
+                showARView(artwork, similarity);
+            }
+        }
+
+        function closeArtworkModal() {
+            const modal = document.getElementById('details-modal');
+            modal.classList.remove('show');
+            // Resume scanning after closing
+            currentMatch = null;
+            startAutoScan();
+        }
+
+        // Persist match and open dedicated details page (optional from modal)
         function openDetailsPage(artwork, similarity) {
             try {
                 // Stop scanning immediately to avoid re-triggers
