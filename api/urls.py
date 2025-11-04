@@ -8,7 +8,8 @@ from .views import (
     scan_artwork, scan_artwork_combined, get_location_artworks, log_interaction, submit_feedback,
     get_recommendations, opt_out_analytics, health_check, check_geofence_access,
     save_navigation_path, get_navigation_path, get_nearest_waypoint,
-    floor_maps_list, floor_map_detail, artwork_map_positions, artwork_map_position_detail
+    floor_maps_list, floor_map_detail, artwork_map_positions, artwork_map_position_detail,
+    scan_metrics
 )
 
 # Create router for viewsets
@@ -36,6 +37,7 @@ urlpatterns = [
     
     # Analytics endpoints (anonymous)
     path('interactions/', log_interaction, name='log-interaction'),
+    path('metrics/scans/', scan_metrics, name='scan-metrics'),
     path('feedback/', submit_feedback, name='submit-feedback'),
     path('recommendations/', get_recommendations, name='get-recommendations'),
     

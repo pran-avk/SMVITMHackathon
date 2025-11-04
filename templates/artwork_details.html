@@ -592,6 +592,8 @@
                 artworkData = JSON.parse(dataStr);
                 displayArtwork();
                 initializeMediaPlayers();
+                // Refresh counts from backend to ensure latest scan/view stats
+                refreshArtworkCounts(artworkData.artwork.id);
             } else {
                 alert('No artwork data found');
                 window.location.href = '/scanner/';
@@ -709,6 +711,19 @@
             
             // Log interaction
             logInteraction('view_details');
+        }
+
+        async function refreshArtworkCounts(artworkId) {
+            try {
+                const resp = await fetch(`/api/artworks/${artworkId}/`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById('scan-count').textContent = data.scan_count || 0;
+                    document.getElementById('view-count').textContent = data.view_count || 0;
+                }
+            } catch (e) {
+                console.warn('Failed to refresh artwork counts');
+            }
         }
 
         function showVideoPlayer() {

@@ -647,10 +647,54 @@
                 // TTS button visible when a match is active
                 const ttsBtn = document.getElementById('modal-tts-btn');
                 if (ttsBtn) ttsBtn.style.display = 'inline-flex';
+
+                // Log scan interaction to backend (per-artwork and overall counts)
+                logScanInteraction(artwork.id, similarity).catch(() => {});
             } catch (e) {
                 console.error('Failed to open modal:', e);
                 // Fallback: keep AR overlay as backup UI
                 showARView(artwork, similarity);
+            }
+        }
+
+        async function ensureSession() {
+            let sid = sessionStorage.getItem('artscope_session_id');
+            if (sid) return sid;
+            try {
+                const resp = await fetch('/api/sessions/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    sid = data.id;
+                    sessionStorage.setItem('artscope_session_id', sid);
+                    return sid;
+                }
+            } catch (e) {
+                console.warn('Session creation failed, proceeding without session');
+            }
+            return null;
+        }
+
+        async function logScanInteraction(artworkId, similarity) {
+            const sid = await ensureSession();
+            if (!sid) return; // silently skip if no session
+            try {
+                await fetch('/api/interactions/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session: sid,
+                        artwork: artworkId,
+                        interaction_type: 'scan',
+                        dwell_time_seconds: 0,
+                        similarity_score: similarity
+                    })
+                });
+            } catch (e) {
+                console.warn('Failed to log scan interaction');
             }
         }
 

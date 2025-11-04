@@ -10,7 +10,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.utils import timezone
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, F
 import numpy as np
 import logging
 
@@ -548,12 +548,56 @@ def log_interaction(request):
     
     interaction = serializer.save()
     
-    # Update session counter
+    # Update counters safely
     session = interaction.session
     session.total_interactions += 1
+    if interaction.interaction_type == 'scan':
+        session.artworks_scanned += 1
+        # increment artwork.scan_count
+        Artwork.objects.filter(id=interaction.artwork_id).update(scan_count=F('scan_count') + 1)
+    elif interaction.interaction_type == 'view_details':
+        # increment artwork.view_count
+        Artwork.objects.filter(id=interaction.artwork_id).update(view_count=F('view_count') + 1)
     session.save()
     
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def scan_metrics(request):
+    """
+    Get scan metrics: overall scans, optional per-artwork count, and top artworks by scans.
+    Query params:
+      - artwork: UUID of artwork to get individual scan_count (optional)
+      - top: integer, number of top artworks to return (default 10)
+    """
+    try:
+        top_n = int(request.query_params.get('top', 10))
+    except (TypeError, ValueError):
+        top_n = 10
+    artwork_id = request.query_params.get('artwork')
+    
+    overall_scans = ArtworkInteraction.objects.filter(interaction_type='scan').count()
+    response = {
+        'overall_scans': overall_scans,
+        'top_artworks': list(
+            Artwork.objects.order_by('-scan_count').values('id', 'title', 'scan_count')[:top_n]
+        )
+    }
+    if artwork_id:
+        try:
+            art = Artwork.objects.get(id=artwork_id)
+            response['artwork'] = {
+                'id': str(art.id),
+                'title': art.title,
+                'scan_count': art.scan_count,
+                'view_count': art.view_count,
+            }
+        except Artwork.DoesNotExist:
+            response['artwork'] = None
+    
+    return Response(response)
 
 
 @api_view(['POST'])
